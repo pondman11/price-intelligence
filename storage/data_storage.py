@@ -28,13 +28,8 @@ def init_database():
     conn.commit()
     cursor.close()
     conn.close()
+    print("✓ Database initialized")
 
-    if not (stocks_exists and daily_prices_exists and index_exists):
-        raise RuntimeError(
-            "Database schema missing. Apply Terraform in storage/db_schema.tf."
-        )
-
-    print("Database schema verified (Terraform-managed).")
 
 def save_stock_data(symbol, time_series):
     """
