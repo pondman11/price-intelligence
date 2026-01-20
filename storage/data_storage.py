@@ -20,7 +20,7 @@ def init_database():
         # Read schema from SQL file
         schema_path = os.path.join(os.path.dirname(__file__), 'schema.sql')
         try:
-            with open(schema_path, 'r') as f:
+            with open(schema_path, 'r', encoding='utf-8') as f:
                 schema_sql = f.read()
         except FileNotFoundError:
             raise FileNotFoundError(f"Schema file not found: {schema_path}")
@@ -28,10 +28,11 @@ def init_database():
             raise IOError(f"Error reading schema file: {e}")
         
         # Split SQL statements and execute individually
-        # Remove comments and split by semicolons
+        # Note: This simple parser works for our schema.sql which uses standard SQL
+        # with single-line comments (--) and semicolon-separated statements
         statements = []
         for line in schema_sql.split(';'):
-            # Remove comments and whitespace
+            # Remove single-line comments and whitespace
             cleaned = '\n'.join(l for l in line.split('\n') if not l.strip().startswith('--'))
             cleaned = cleaned.strip()
             if cleaned:  # Only add non-empty statements
@@ -42,9 +43,13 @@ def init_database():
             cursor.execute(statement)
         
         conn.commit()
+    except (FileNotFoundError, IOError):
+        # Re-raise file-related errors without wrapping
+        conn.rollback()
+        raise
     except Exception as e:
         conn.rollback()
-        raise Exception(f"Failed to initialize database: {e}")
+        raise RuntimeError(f"Failed to initialize database: {e}") from e
     finally:
         cursor.close()
         conn.close()
