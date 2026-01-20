@@ -84,7 +84,15 @@ price-intelligence/
 ├── .gitignore             # Git ignore rules
 ├── requirements.txt       # Python dependencies
 ├── README.md             # This file
-├── test_api.py           # API connection test
+├── config.py             # Configuration settings
+├── fetch_and_store.py    # Main script to fetch and store data
+├── fetchers/             # Data fetching modules
+│   ├── __init__.py
+│   └── data_fetcher.py   # AlphaVantage API integration
+├── storage/              # Database storage modules
+│   ├── __init__.py
+│   ├── data_storage.py   # Database operations
+│   └── schema.sql        # Database schema definitions
 └── venv/                 # Virtual environment (not in git)
 ```
 
