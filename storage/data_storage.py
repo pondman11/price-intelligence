@@ -11,44 +11,35 @@ def get_connection():
 
 
 def init_database():
-    """Create tables if they don't exist."""
+    """Verify Terraform-managed tables exist."""
     conn = get_connection()
     cursor = conn.cursor()
-    
-    # Stocks table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS stocks (
-            symbol TEXT PRIMARY KEY,
-            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Daily prices table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS daily_prices (
-            id SERIAL PRIMARY KEY,
-            symbol TEXT NOT NULL,
-            date DATE NOT NULL,
-            open REAL NOT NULL,
-            high REAL NOT NULL,
-            low REAL NOT NULL,
-            close REAL NOT NULL,
-            volume BIGINT NOT NULL,
-            UNIQUE(symbol, date)
-        )
-    ''')
-    
-    # Index for faster queries
-    cursor.execute('''
-        CREATE INDEX IF NOT EXISTS idx_daily_prices_symbol_date 
-        ON daily_prices(symbol, date DESC)
-    ''')
-    
-    conn.commit()
+
+    cursor.execute("""
+        SELECT
+            to_regclass('public.stocks') IS NOT NULL AS stocks_exists,
+            to_regclass('public.daily_prices') IS NOT NULL AS daily_prices_exists
+    """)
+    stocks_exists, daily_prices_exists = cursor.fetchone()
+
+    cursor.execute("""
+        SELECT 1
+        FROM pg_indexes
+        WHERE schemaname = 'public'
+          AND indexname = 'idx_daily_prices_symbol_date'
+        LIMIT 1
+    """)
+    index_exists = cursor.fetchone() is not None
+
     cursor.close()
     conn.close()
-    print("✓ Database initialized")
 
+    if not (stocks_exists and daily_prices_exists and index_exists):
+        raise RuntimeError(
+            "Database schema missing. Apply Terraform in storage/db_schema.tf."
+        )
+
+    print("Database schema verified (Terraform-managed).")
 
 def save_stock_data(symbol, time_series):
     """
