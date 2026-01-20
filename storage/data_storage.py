@@ -16,18 +16,39 @@ def init_database():
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Read schema from SQL file
-    schema_path = os.path.join(os.path.dirname(__file__), 'schema.sql')
-    with open(schema_path, 'r') as f:
-        schema_sql = f.read()
+    try:
+        # Read schema from SQL file
+        schema_path = os.path.join(os.path.dirname(__file__), 'schema.sql')
+        try:
+            with open(schema_path, 'r') as f:
+                schema_sql = f.read()
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Schema file not found: {schema_path}")
+        except IOError as e:
+            raise IOError(f"Error reading schema file: {e}")
+        
+        # Split SQL statements and execute individually
+        # Remove comments and split by semicolons
+        statements = []
+        for line in schema_sql.split(';'):
+            # Remove comments and whitespace
+            cleaned = '\n'.join(l for l in line.split('\n') if not l.strip().startswith('--'))
+            cleaned = cleaned.strip()
+            if cleaned:  # Only add non-empty statements
+                statements.append(cleaned)
+        
+        # Execute each statement separately
+        for statement in statements:
+            cursor.execute(statement)
+        
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        raise Exception(f"Failed to initialize database: {e}")
+    finally:
+        cursor.close()
+        conn.close()
     
-    # Execute the schema SQL
-    # Note: psycopg2 can handle multiple statements separated by semicolons
-    cursor.execute(schema_sql)
-    
-    conn.commit()
-    cursor.close()
-    conn.close()
     print("✓ Database initialized")
 
 
