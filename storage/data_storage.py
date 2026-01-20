@@ -1,6 +1,7 @@
 """
 Functions for storing and retrieving data from Supabase.
 """
+import os
 import psycopg2
 from config import DB_CONFIG
 
@@ -14,23 +15,17 @@ def init_database():
     """Verify Terraform-managed tables exist."""
     conn = get_connection()
     cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            to_regclass('public.stocks') IS NOT NULL AS stocks_exists,
-            to_regclass('public.daily_prices') IS NOT NULL AS daily_prices_exists
-    """)
-    stocks_exists, daily_prices_exists = cursor.fetchone()
-
-    cursor.execute("""
-        SELECT 1
-        FROM pg_indexes
-        WHERE schemaname = 'public'
-          AND indexname = 'idx_daily_prices_symbol_date'
-        LIMIT 1
-    """)
-    index_exists = cursor.fetchone() is not None
-
+    
+    # Read schema from SQL file
+    schema_path = os.path.join(os.path.dirname(__file__), 'schema.sql')
+    with open(schema_path, 'r') as f:
+        schema_sql = f.read()
+    
+    # Execute the schema SQL
+    # Note: psycopg2 can handle multiple statements separated by semicolons
+    cursor.execute(schema_sql)
+    
+    conn.commit()
     cursor.close()
     conn.close()
 
